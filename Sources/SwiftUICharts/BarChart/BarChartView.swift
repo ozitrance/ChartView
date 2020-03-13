@@ -10,6 +10,7 @@ import SwiftUI
 
 public struct BarChartView : View {
     @Environment(\.colorScheme) var colorScheme: ColorScheme
+    @Binding var selected: String
     private var data: ChartData
     public var title: String
     public var legend: String?
@@ -21,8 +22,8 @@ public struct BarChartView : View {
     public var valueSpecifier:String
     
     @State private var touchLocation: CGFloat = -1.0
-    @State private var showValue: Bool = false
-    @State private var showLabelValue: Bool = false
+    @State private var showValue: Bool = true
+    @State private var showLabelValue: Bool = true
     @State private var currentValue: Double = 0 {
         didSet{
             if(oldValue != self.currentValue && self.showValue) {
@@ -33,16 +34,18 @@ public struct BarChartView : View {
     var isFullWidth:Bool {
         return self.formSize == ChartForm.large
     }
-    public init(data:ChartData, title: String, legend: String? = nil, style: ChartStyle = Styles.barChartStyleOrangeLight, form: CGSize? = ChartForm.medium, dropShadow: Bool? = true, cornerImage:Image? = Image(systemName: "waveform.path.ecg"), valueSpecifier: String? = "%.1f"){
+    public init(selected: Binding<String>, data:ChartData, title: String, legend: String? = nil, style: ChartStyle = Styles.barChartStyleOrangeLight, form: CGSize? = ChartForm.medium, dropShadow: Bool? = true, cornerImage:Image? = Image(systemName: "waveform.path.ecg"), valueSpecifier: String? = "%.0f"){
+        self._selected = selected
         self.data = data
         self.title = title
         self.legend = legend
         self.style = style
         self.darkModeStyle = style.darkModeStyle != nil ? style.darkModeStyle! : Styles.barChartStyleOrangeDark
         self.formSize = form!
-        self.dropShadow = dropShadow
+        self.dropShadow = dropShadow ?? false
         self.cornerImage = cornerImage!
         self.valueSpecifier = valueSpecifier!
+        
     }
     
     public var body: some View {
@@ -55,11 +58,12 @@ public struct BarChartView : View {
                 HStack{
                     if(!showValue){
                         Text(self.title)
-                            .font(.headline)
+                            .font(.headline).lineLimit(1)
                             .foregroundColor(self.colorScheme == .dark ? self.darkModeStyle.textColor : self.style.textColor)
                     }else{
-                        Text("\(self.currentValue, specifier: self.valueSpecifier)")
+                        Text("\(self.getCurrentValue()?.1 ?? 0, specifier: self.valueSpecifier)% of Daily Values").lineLimit(1).allowsTightening(true).fixedSize()
                             .font(.headline)
+                            // .fontWeight(.thin)
                             .foregroundColor(self.colorScheme == .dark ? self.darkModeStyle.textColor : self.style.textColor)
                     }
                     if(self.formSize == ChartForm.large && self.legend != nil && !showValue) {
@@ -73,7 +77,7 @@ public struct BarChartView : View {
                     self.cornerImage
                         .imageScale(.large)
                         .foregroundColor(self.colorScheme == .dark ? self.darkModeStyle.legendTextColor : self.style.legendTextColor)
-                }.padding()
+                }//.padding()
                 BarChartRow(data: data.points.map{$0.1},
                             accentColor: self.colorScheme == .dark ? self.darkModeStyle.accentColor : self.style.accentColor,
                             gradient: self.colorScheme == .dark ? self.darkModeStyle.gradientColor : self.style.gradientColor,
@@ -103,12 +107,23 @@ public struct BarChartView : View {
                     if(self.data.valuesGiven && self.formSize == ChartForm.medium) {
                         self.showLabelValue = true
                     }
+                    withAnimation {
+
+                    self.selected = self.getCurrentValue()!.0
+                    }
+                    
                 })
+                
                 .onEnded({ value in
-                    self.showValue = false
-                    self.showLabelValue = false
-                    self.touchLocation = -1
+               //     self.showValue = false
+               //     self.showLabelValue = false
+               //     self.touchLocation = -1
+                    withAnimation {
+			self.selected = ""
+                    }
+                    
                 })
+                 
         )
             .gesture(TapGesture()
         )
@@ -136,13 +151,13 @@ public struct BarChartView : View {
     }
 }
 
-#if DEBUG
-struct ChartView_Previews : PreviewProvider {
-    static var previews: some View {
-        BarChartView(data: TestData.values ,
-                     title: "Model 3 sales",
-                     legend: "Quarterly",
-                     valueSpecifier: "%.0f")
-    }
-}
-#endif
+//#if DEBUG
+//struct ChartView_Previews : PreviewProvider {
+//    static var previews: some View {
+//        BarChartView(data: TestData.values ,
+//                     title: "Model 3 sales",
+//                     legend: "Quarterly",
+//                     valueSpecifier: "%.0f")
+//    }
+//}
+//#endif
